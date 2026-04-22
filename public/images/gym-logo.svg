@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-labelledby="title">
+  <title>GymSystem logo</title>
+  <rect width="120" height="120" rx="24" ry="24" fill="#111"/>
+  <path d="M38 35c5-7 15-8 21-2 6-6 16-5 21 2 0 0 7 12-4 16-6 2-9 0-11-3-1 4-3 11-9 12-6-1-8-8-9-12-2 3-5 5-11 3-10-4-4-16-4-16Z" fill="#fff"/>
+  <path d="M40 82c0-8 7-14 15-14s15 6 15 14a4 4 0 0 1-4 4H44a4 4 0 0 1-4-4Z" fill="#fff"/>
+  <path d="M32 50c8 3 14 10 16 18 5-2 13-2 18 0 2-8 8-15 16-18 2 5-2 11-6 12-5 1-8-3-10-6-2 4-6 7-8 11-2-4-6-7-8-11-2 3-5 7-10 6-4-1-8-7-6-12Z" fill="#fff" opacity="0.9"/>
+</svg>
