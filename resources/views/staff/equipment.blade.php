@@ -31,7 +31,6 @@
         <datalist id="equipmentSuggestions">
             @foreach ($equipment as $item)
                 <option value="{{ $item->name }}"></option>
-                <option value="{{ $item->condition_status }}"></option>
                 <option value="{{ $item->status }}"></option>
             @endforeach
         </datalist>
@@ -45,8 +44,7 @@
                     <th>Equipment</th>
                     <th>Quantity</th>
                     <th>Usage Status</th>
-                    <th>Condition</th>
-                    <th>Last Maintenance</th>
+                    <th>Latest Maintenance</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -58,7 +56,6 @@
                         </td>
                         <td>{{ $item->quantity }}</td>
                         <td><span class="badge {{ strtolower(str_replace(' ', '-', $item->status)) }}">{{ $item->status }}</span></td>
-                        <td><span class="badge {{ strtolower(str_replace(' ', '-', $item->condition_status)) }}">{{ $item->condition_status }}</span></td>
                         <td>{{ optional($item->last_maintenance_date)->format('Y-m-d') ?: 'Not set' }}</td>
                     </tr>
                 @empty

@@ -48,8 +48,8 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        Schema::create('class_trainers', function (Blueprint $table) {
-            $table->id();
+        Schema::create('class_trainer', function (Blueprint $table) {
+            $table->id('trainer_id');
             $table->foreignId('class_id')->constrained('classes', 'class_id')->cascadeOnDelete();
             $table->foreignId('staff_id')->constrained('staff', 'staff_id')->cascadeOnDelete();
             $table->timestamps();
@@ -57,8 +57,8 @@ return new class extends Migration
             $table->unique(['class_id', 'staff_id']);
         });
 
-        Schema::create('class_equipments', function (Blueprint $table) {
-            $table->id();
+        Schema::create('class_equipment', function (Blueprint $table) {
+            $table->id('cl_equpment_id');
             $table->foreignId('class_id')->constrained('classes', 'class_id')->cascadeOnDelete();
             $table->foreignId('equipment_id')->constrained('equipments', 'equipment_id')->cascadeOnDelete();
             $table->timestamps();
@@ -105,8 +105,8 @@ return new class extends Migration
         Schema::dropIfExists('payments');
         Schema::dropIfExists('attendances');
         Schema::dropIfExists('bookings');
-        Schema::dropIfExists('class_equipments');
-        Schema::dropIfExists('class_trainers');
+        Schema::dropIfExists('class_equipment');
+        Schema::dropIfExists('class_trainer');
         Schema::dropIfExists('classes');
         Schema::dropIfExists('equipments');
         Schema::dropIfExists('staff');

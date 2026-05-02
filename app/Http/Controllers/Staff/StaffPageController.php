@@ -167,9 +167,9 @@ class StaffPageController extends Controller
         $classStart = $scheduleTime ?? Carbon::parse($gymClass->schedule_time);
         $classEnd = $classStart->copy()->addHour();
 
-        $hasScheduleConflict = DB::table('class_trainers')
-            ->join('classes', 'classes.class_id', '=', 'class_trainers.class_id')
-            ->where('class_trainers.staff_id', $trainer->staff_id)
+        $hasScheduleConflict = DB::table('class_trainer')
+            ->join('classes', 'classes.class_id', '=', 'class_trainer.class_id')
+            ->where('class_trainer.staff_id', $trainer->staff_id)
             ->where('classes.class_id', '!=', $gymClass->class_id)
             ->where(function ($query) use ($classStart, $classEnd): void {
                 $query
@@ -233,8 +233,7 @@ class StaffPageController extends Controller
         $equipment = DB::table('equipment_with_classes_view')
             ->when($search !== '', function ($query) use ($search): void {
                 $query->where('name', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%")
-                    ->orWhere('condition_status', 'like', "%{$search}%");
+                    ->orWhere('description', 'like', "%{$search}%");
             })
             ->orderBy('name')
             ->get()
@@ -302,13 +301,13 @@ class StaffPageController extends Controller
     {
         $now = now();
         $assignedClassIds = $staffId
-            ? DB::table('class_trainers')
+            ? DB::table('class_trainer')
                 ->where('staff_id', $staffId)
                 ->pluck('class_id')
                 ->map(fn ($id) => (int) $id)
                 ->all()
             : [];
-        $trainerIdsByClass = DB::table('class_trainers')
+        $trainerIdsByClass = DB::table('class_trainer')
             ->select('class_id', DB::raw("GROUP_CONCAT(staff_id ORDER BY staff_id SEPARATOR ',') AS trainer_ids_csv"))
             ->groupBy('class_id')
             ->pluck('trainer_ids_csv', 'class_id');

@@ -67,8 +67,8 @@ class CleanupSampleGymDataSeeder extends Seeder
             Booking::query()->whereIn('member_id', $memberIds)->delete();
             Payment::query()->whereIn('member_id', $memberIds)->delete();
 
-            DB::table('class_trainers')->whereIn('staff_id', $staffIds)->delete();
-            DB::table('class_equipments')->whereIn('equipment_id', $equipmentIds)->delete();
+            DB::table('class_trainer')->whereIn('staff_id', $staffIds)->delete();
+            DB::table('class_equipment')->whereIn('equipment_id', $equipmentIds)->delete();
 
             GymClass::query()->whereIn('class_id', $classIds)->delete();
             Equipment::query()->whereIn('equipment_id', $equipmentIds)->delete();

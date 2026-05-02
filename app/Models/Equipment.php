@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Equipment extends Model
 {
@@ -18,25 +19,26 @@ class Equipment extends Model
         'name',
         'quantity',
         'status',
-        'condition_status',
-        'last_maintenance_date',
         'description',
     ];
 
     protected function casts(): array
     {
-        return [
-            'last_maintenance_date' => 'date',
-        ];
+        return [];
     }
 
     public function classes(): BelongsToMany
     {
         return $this->belongsToMany(
             GymClass::class,
-            'class_equipments',
+            'class_equipment',
             'equipment_id',
             'class_id'
         )->withTimestamps();
+    }
+
+    public function maintenanceLogs(): HasMany
+    {
+        return $this->hasMany(EquipmentMaintenanceLog::class, 'equipment_id', 'equipment_id')->latest();
     }
 }

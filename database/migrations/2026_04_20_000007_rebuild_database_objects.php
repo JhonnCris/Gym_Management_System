@@ -173,7 +173,7 @@ return new class extends Migration
                 tu.full_name AS trainer_name
             FROM bookings b
             INNER JOIN classes c ON c.class_id = b.class_id
-            LEFT JOIN class_trainers ct ON ct.class_id = c.class_id
+            LEFT JOIN class_trainer ct ON ct.class_id = c.class_id
             LEFT JOIN staff s ON s.staff_id = ct.staff_id
             LEFT JOIN users tu ON tu.id = s.user_id
         SQL);
@@ -210,7 +210,7 @@ return new class extends Migration
                 GROUP_CONCAT(DISTINCT tu.full_name ORDER BY tu.full_name SEPARATOR ', ') AS trainer_names
             FROM classes c
             LEFT JOIN bookings b ON b.class_id = c.class_id
-            LEFT JOIN class_trainers ct ON ct.class_id = c.class_id
+            LEFT JOIN class_trainer ct ON ct.class_id = c.class_id
             LEFT JOIN staff s ON s.staff_id = ct.staff_id
             LEFT JOIN users tu ON tu.id = s.user_id
             GROUP BY c.class_id, c.class_name, c.schedule_time, c.max_slots
@@ -228,7 +228,7 @@ return new class extends Migration
                 e.description,
                 COUNT(DISTINCT ce.class_id) AS classes_count
             FROM equipments e
-            LEFT JOIN class_equipments ce ON ce.equipment_id = e.equipment_id
+            LEFT JOIN class_equipment ce ON ce.equipment_id = e.equipment_id
             GROUP BY
                 e.equipment_id,
                 e.name,
@@ -681,7 +681,7 @@ return new class extends Migration
                 );
 
                 DELETE ct
-                FROM class_trainers ct
+                FROM class_trainer ct
                 INNER JOIN staff s ON s.staff_id = ct.staff_id
                 INNER JOIN users u ON u.id = s.user_id
                 WHERE u.email IN (
@@ -695,7 +695,7 @@ return new class extends Migration
                 );
 
                 DELETE ce
-                FROM class_equipments ce
+                FROM class_equipment ce
                 INNER JOIN equipments e ON e.equipment_id = ce.equipment_id
                 WHERE e.name IN (
                     'Treadmill Pro X1',

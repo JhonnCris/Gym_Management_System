@@ -1,0 +1,61 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Facades\DB;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        if (DB::getDriverName() !== 'mysql') {
+            return;
+        }
+
+        // Drop the get_membership_plan_price function as it's no longer needed
+        // Pricing is now managed through the membership_plans table
+        DB::unprepared('DROP FUNCTION IF EXISTS `get_membership_plan_price`');
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        if (DB::getDriverName() !== 'mysql') {
+            return;
+        }
+
+        // Recreate the function for rollback
+        DB::unprepared(<<<'SQL'
+            CREATE FUNCTION get_membership_plan_price(plan_name_param VARCHAR(50)) RETURNS DECIMAL(12,2)
+            READS SQL DATA
+            BEGIN
+                DECLARE plan_price DECIMAL(12,2);
+
+                SELECT p.amount
+                INTO plan_price
+                FROM payments p
+                WHERE p.status = 'Paid'
+                  AND p.requested_membership_type = plan_name_param
+                ORDER BY p.payment_date DESC
+                LIMIT 1;
+
+                IF plan_price IS NULL THEN
+                    SELECT p.amount
+                    INTO plan_price
+                    FROM payments p
+                    INNER JOIN members m ON m.member_id = p.member_id
+                    WHERE p.status = 'Paid'
+                      AND m.membership_type = plan_name_param
+                    ORDER BY p.payment_date DESC
+                    LIMIT 1;
+                END IF;
+
+                RETURN COALESCE(plan_price, 0.00);
+            END
+        SQL);
+    }
+};

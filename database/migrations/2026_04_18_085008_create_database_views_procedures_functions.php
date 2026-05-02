@@ -56,7 +56,7 @@ return new class extends Migration
                 u.full_name AS trainer_name
             FROM bookings b
             JOIN classes c ON b.class_id = c.class_id
-            LEFT JOIN class_trainers ct ON c.class_id = ct.class_id
+            LEFT JOIN class_trainer ct ON c.class_id = ct.class_id
             LEFT JOIN users u ON ct.staff_id = u.id
         ");
 

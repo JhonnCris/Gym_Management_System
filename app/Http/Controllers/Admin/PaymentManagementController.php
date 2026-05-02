@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Member;
 use App\Models\Payment;
-use App\Support\MembershipPlanCatalog;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -89,8 +88,7 @@ class PaymentManagementController extends Controller
         }
 
         DB::transaction(function () use ($request, $payment): void {
-            $planName = $payment->requested_membership_type ?: $payment->member?->membership_type;
-            $plan = $planName ? MembershipPlanCatalog::find($planName) : null;
+            $plan = $payment->requestedMembershipPlan;
             $member = Member::query()->findOrFail($payment->member_id);
 
             if ($plan) {
@@ -99,9 +97,10 @@ class PaymentManagementController extends Controller
                     : now();
 
                 $member->update([
-                    'membership_type' => $plan['name'],
+                    'membership_plan_id' => $plan->mem_plan_id,
+                    'membership_type' => $plan->name,
                     'status' => 'Active',
-                    'expiry_date' => $startDate->copy()->addMonths($plan['duration_months'])->toDateString(),
+                    'expiry_date' => $startDate->copy()->addMonths($plan->duration_months)->toDateString(),
                 ]);
             }
 

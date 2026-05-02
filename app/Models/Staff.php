@@ -30,7 +30,7 @@ class Staff extends Model
     {
         return $this->belongsToMany(
             GymClass::class,
-            'class_trainers',
+            'class_trainer',
             'staff_id',
             'class_id'
         )->withTimestamps();

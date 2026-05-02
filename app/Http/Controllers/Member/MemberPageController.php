@@ -218,13 +218,14 @@ class MemberPageController extends Controller
 
             Payment::create([
                 'member_id' => $member->member_id,
-                'amount' => $selectedPlan['price'],
+                'requested_membership_plan_id' => $selectedPlan->mem_plan_id,
+                'amount' => $selectedPlan->price,
                 'payment_date' => now(),
                 'payment_method' => $validated['payment_method'],
                 'reference_number' => $validated['reference_number'],
                 'gcash_number' => $validated['gcash_number'] ?? null,
                 'gcash_image_path' => $gcashImagePath,
-                'requested_membership_type' => $selectedPlan['name'],
+                'requested_membership_type' => $selectedPlan->name,
                 'status' => 'Pending',
             ]);
         });

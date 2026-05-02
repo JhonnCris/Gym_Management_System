@@ -25,7 +25,7 @@
             <div class="card-icon">@include('admin.partials.icon', ['name' => 'warning'])</div>
             <p class="summary-title">Needs Attention</p>
             <p class="summary-value">{{ $stats['attention_items'] }}</p>
-            <small>Maintenance or damaged condition</small>
+            <small>Maintenance, damaged, or under-repair items</small>
         </div>
         <div class="summary-card">
             <div class="card-icon">@include('admin.partials.icon', ['name' => 'reports'])</div>
@@ -66,25 +66,10 @@
                 <label for="status">Status</label>
                 <select id="status" name="status" class="{{ $errors->has('status') ? 'input-invalid' : '' }}">
                     <option value="Available" {{ old('status') === 'Available' ? 'selected' : '' }}>Available</option>
+                    <option value="In Use" {{ old('status') === 'In Use' ? 'selected' : '' }}>In Use</option>
                     <option value="Maintenance" {{ old('status') === 'Maintenance' ? 'selected' : '' }}>Maintenance</option>
                 </select>
                 @error('status')<div class="field-error">{{ $message }}</div>@enderror
-            </div>
-
-            <div class="field">
-                <label for="condition_status">Condition</label>
-                <select id="condition_status" name="condition_status" class="{{ $errors->has('condition_status') ? 'input-invalid' : '' }}">
-                    <option value="Good" {{ old('condition_status') === 'Good' ? 'selected' : '' }}>Good</option>
-                    <option value="Fair" {{ old('condition_status') === 'Fair' ? 'selected' : '' }}>Fair</option>
-                    <option value="Needs Repair" {{ old('condition_status') === 'Needs Repair' ? 'selected' : '' }}>Needs Repair</option>
-                </select>
-                @error('condition_status')<div class="field-error">{{ $message }}</div>@enderror
-            </div>
-
-            <div class="field">
-                <label for="last_maintenance_date">Last Maintenance</label>
-                <input id="last_maintenance_date" name="last_maintenance_date" type="date" value="{{ old('last_maintenance_date') }}" class="{{ $errors->has('last_maintenance_date') ? 'input-invalid' : '' }}">
-                @error('last_maintenance_date')<div class="field-error">{{ $message }}</div>@enderror
             </div>
 
             <div class="field" style="grid-column: span 3;">
@@ -111,8 +96,7 @@
                         <th>Equipment</th>
                         <th>Quantity</th>
                         <th>Usage Status</th>
-                        <th>Condition</th>
-                        <th>Last Maintenance</th>
+                        <th>Latest Maintenance</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -124,12 +108,11 @@
                             </td>
                             <td>{{ $equipment->quantity }}</td>
                             <td><span class="pill {{ str($equipment->status)->slug('-') }}">{{ $equipment->status }}</span></td>
-                            <td><span class="pill {{ str($equipment->condition_status)->slug('-') }}">{{ $equipment->condition_status }}</span></td>
-                            <td>{{ optional($equipment->last_maintenance_date)?->format('M d, Y') ?? 'Not set' }}</td>
+                            <td>{{ optional($equipment->last_maintenance_date)->format('M d, Y') ?: 'Not set' }}</td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5">No equipment has been recorded yet.</td>
+                            <td colspan="4">No equipment has been recorded yet.</td>
                         </tr>
                     @endforelse
                 </tbody>

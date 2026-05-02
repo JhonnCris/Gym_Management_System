@@ -17,6 +17,7 @@ class Member extends Model
 
     protected $fillable = [
         'user_id',
+        'membership_plan_id',
         'phone',
         'membership_type',
         'join_date',
@@ -45,5 +46,15 @@ class Member extends Model
     public function attendances(): HasMany
     {
         return $this->hasMany(Attendance::class, 'member_id', 'member_id');
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class, 'member_id', 'member_id');
+    }
+
+    public function membershipPlan(): BelongsTo
+    {
+        return $this->belongsTo(MembershipPlan::class, 'membership_plan_id', 'mem_plan_id');
     }
 }

@@ -277,9 +277,7 @@ class AdminPageController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:120',
             'quantity' => 'required|integer|min:1',
-            'status' => 'required|string|in:Available,Maintenance',
-            'condition_status' => 'required|string|in:Good,Fair,Needs Repair',
-            'last_maintenance_date' => 'nullable|date',
+            'status' => 'required|string|in:Available,In Use,Maintenance',
             'description' => 'nullable|string|max:500',
         ]);
 

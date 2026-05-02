@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\Admin;
 use App\Models\Attendance;
 use App\Models\Booking;
 use App\Models\Equipment;
@@ -23,7 +22,7 @@ class SampleGymDataSeeder extends Seeder
     public function run(): void
     {
         DB::transaction(function (): void {
-            $admin = User::query()->updateOrCreate(
+            User::query()->updateOrCreate(
                 ['email' => 'admin.demo@wedumbell.test'],
                 [
                     'full_name' => 'Demo Admin',
@@ -33,11 +32,6 @@ class SampleGymDataSeeder extends Seeder
                     'password' => Hash::make('test1234'),
                     'last_visit_at' => now()->subHours(1),
                 ]
-            );
-
-            Admin::query()->updateOrCreate(
-                ['user_id' => $admin->id],
-                []
             );
 
             $staffUsers = collect([
@@ -146,24 +140,18 @@ class SampleGymDataSeeder extends Seeder
                     'name' => 'Treadmill Pro X1',
                     'quantity' => 6,
                     'status' => 'Available',
-                    'condition_status' => 'Good',
-                    'last_maintenance_date' => now()->subDays(15)->toDateString(),
                     'description' => 'Cardio treadmill for general gym use.',
                 ],
                 [
                     'name' => 'Spin Bike Elite',
                     'quantity' => 12,
                     'status' => 'In Use',
-                    'condition_status' => 'Good',
-                    'last_maintenance_date' => now()->subDays(25)->toDateString(),
                     'description' => 'Indoor cycling bikes used in spin classes.',
                 ],
                 [
                     'name' => 'Boxing Pad Set',
                     'quantity' => 8,
                     'status' => 'Maintenance',
-                    'condition_status' => 'Under Repair',
-                    'last_maintenance_date' => now()->subDays(40)->toDateString(),
                     'description' => 'Focus mitts and pads for boxing drills.',
                 ],
             ])->map(fn (array $item) => Equipment::query()->updateOrCreate(

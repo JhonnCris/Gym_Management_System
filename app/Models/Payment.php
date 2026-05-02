@@ -16,6 +16,7 @@ class Payment extends Model
 
     protected $fillable = [
         'member_id',
+        'requested_membership_plan_id',
         'amount',
         'payment_date',
         'payment_method',
@@ -45,5 +46,10 @@ class Payment extends Model
     public function reviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewed_by_user_id');
+    }
+
+    public function requestedMembershipPlan(): BelongsTo
+    {
+        return $this->belongsTo(MembershipPlan::class, 'requested_membership_plan_id', 'mem_plan_id');
     }
 }

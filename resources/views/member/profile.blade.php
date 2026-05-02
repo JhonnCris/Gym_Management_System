@@ -18,7 +18,7 @@
                 </div>
                 <div>
                     <dt>Membership plan</dt>
-                    <dd>{{ $member->membership_type ?? 'Standard' }}</dd>
+                    <dd>{{ $member->membershipPlan?->name ?? $member->membership_type ?? 'Standard' }}</dd>
                 </div>
                 <div>
                     <dt>Current bookings</dt>
@@ -69,7 +69,7 @@
                 <dl class="info-grid">
                     <div>
                         <dt>Plan type</dt>
-                        <dd>{{ $member->membership_type ?? 'Standard' }}</dd>
+                        <dd>{{ $member->membershipPlan?->name ?? $member->membership_type ?? 'Standard' }}</dd>
                     </div>
                     <div>
                         <dt>Expiry date</dt>

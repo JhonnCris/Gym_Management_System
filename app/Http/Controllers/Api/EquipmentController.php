@@ -26,8 +26,6 @@ class EquipmentController extends Controller
             'name' => ['required', 'string', 'max:100'],
             'quantity' => ['nullable', 'integer', 'min:0'],
             'status' => ['nullable', Rule::in(['Available', 'In Use', 'Maintenance'])],
-            'condition_status' => ['nullable', Rule::in(['Good', 'Damaged', 'Under Repair'])],
-            'last_maintenance_date' => ['nullable', 'date'],
             'description' => ['nullable', 'string'],
         ]);
 
@@ -47,8 +45,6 @@ class EquipmentController extends Controller
             'name' => ['sometimes', 'required', 'string', 'max:100'],
             'quantity' => ['sometimes', 'required', 'integer', 'min:0'],
             'status' => ['sometimes', 'required', Rule::in(['Available', 'In Use', 'Maintenance'])],
-            'condition_status' => ['sometimes', 'required', Rule::in(['Good', 'Damaged', 'Under Repair'])],
-            'last_maintenance_date' => ['sometimes', 'nullable', 'date'],
             'description' => ['sometimes', 'nullable', 'string'],
         ]);
 

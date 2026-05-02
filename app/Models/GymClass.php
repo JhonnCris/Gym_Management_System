@@ -32,7 +32,7 @@ class GymClass extends Model
     {
         return $this->belongsToMany(
             Staff::class,
-            'class_trainers',
+            'class_trainer',
             'class_id',
             'staff_id'
         )->withTimestamps();
@@ -42,7 +42,7 @@ class GymClass extends Model
     {
         return $this->belongsToMany(
             Equipment::class,
-            'class_equipments',
+            'class_equipment',
             'class_id',
             'equipment_id'
         )->withTimestamps();
