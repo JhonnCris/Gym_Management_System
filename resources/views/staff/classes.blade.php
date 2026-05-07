@@ -23,7 +23,6 @@
 
     <section class="section-card">
         <div class="section-heading">
-            <span class="inline-icon">@include('staff.partials.icon', ['name' => 'plus'])</span>
             <strong>Add New Class</strong>
         </div>
 
