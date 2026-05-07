@@ -7,9 +7,9 @@ use App\Models\Member;
 use App\Models\Staff;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 
@@ -23,7 +23,7 @@ class UserManagementController extends Controller
             return response()->json(['suggestions' => []]);
         }
 
-        $users = DB::table('user_overview_view')
+        $users = User::withOverview()
             ->where(function ($q) use ($search): void {
                 $q->where('full_name', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%")
@@ -51,7 +51,7 @@ class UserManagementController extends Controller
         $role = $request->query('role');
         $status = $request->query('status');
 
-        $query = DB::table('user_overview_view')
+        $query = User::withOverview()
             ->when($search !== '', function ($q) use ($search): void {
                 $q->where(function ($inner) use ($search): void {
                     $inner->where('full_name', 'like', "%{$search}%")
@@ -240,9 +240,9 @@ class UserManagementController extends Controller
     private function stats(): array
     {
         return [
-            'active' => DB::table('user_overview_view')->where('user_status', 'Active')->count(),
-            'inactive' => DB::table('user_overview_view')->where('user_status', 'Inactive')->count(),
-            'suspended' => DB::table('user_overview_view')->where('user_status', 'Suspended')->count(),
+            'active' => User::query()->whereNull('deleted_at')->where('status', 'Active')->count(),
+            'inactive' => User::query()->whereNull('deleted_at')->where('status', 'Inactive')->count(),
+            'suspended' => User::query()->whereNull('deleted_at')->where('status', 'Suspended')->count(),
         ];
     }
 

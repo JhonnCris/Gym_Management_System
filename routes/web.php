@@ -8,53 +8,11 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Member\MemberPageController;
 use App\Http\Controllers\Staff\StaffPageController;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('welcome');
 })->name('welcome');
-
-Route::get('/ops/db-check', function (Request $request) {
-    $token = (string) env('OPS_TOKEN', '');
-
-    abort_unless($token !== '' && hash_equals($token, (string) $request->query('token', '')), 403);
-
-    $default = config('database.default');
-    $connection = config("database.connections.{$default}", []);
-
-    return response()->json([
-        'default_connection' => $default,
-        'resolved_driver' => $connection['driver'] ?? null,
-        'resolved_host' => $connection['host'] ?? null,
-        'resolved_port' => $connection['port'] ?? null,
-        'resolved_database' => $connection['database'] ?? null,
-        'tables_count' => count(DB::select('SHOW TABLES')),
-    ]);
-});
-
-Route::get('/ops/run-migrate', function (Request $request) {
-    $token = (string) env('OPS_TOKEN', '');
-
-    abort_unless($token !== '' && hash_equals($token, (string) $request->query('token', '')), 403);
-
-    Artisan::call('config:clear');
-
-    $database = (string) env('DB_CONNECTION', 'mysql');
-    $exitCode = Artisan::call('migrate', [
-        '--force' => true,
-        '--database' => $database,
-    ]);
-
-    return response()->json([
-        'exit_code' => $exitCode,
-        'database' => $database,
-        'output' => Artisan::output(),
-        'tables_count' => count(DB::select('SHOW TABLES')),
-    ]);
-});
 
 Route::post('/login', [LoginController::class, 'store'])->name('login.store');
 Route::post('/register', [RegisterController::class, 'store'])->name('register.store');

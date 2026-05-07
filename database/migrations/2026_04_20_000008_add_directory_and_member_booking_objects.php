@@ -7,6 +7,8 @@ return new class extends Migration
 {
     public function up(): void
     {
+        return;
+
         if (DB::getDriverName() !== 'mysql') {
             return;
         }
@@ -62,6 +64,8 @@ return new class extends Migration
 
     public function down(): void
     {
+        return;
+
         if (DB::getDriverName() !== 'mysql') {
             return;
         }

@@ -11,6 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
+        return;
+
         // Create Views
         DB::statement("
             CREATE VIEW pending_payments_view AS
@@ -90,6 +92,8 @@ return new class extends Migration
      */
     public function down(): void
     {
+        return;
+
         DB::statement('DROP PROCEDURE IF EXISTS get_member_bookings');
         ManagedSqlFunctions::run('DROP FUNCTION IF EXISTS get_pending_count', 'drop function get_pending_count');
         ManagedSqlFunctions::run('DROP FUNCTION IF EXISTS get_total_paid_amount', 'drop function get_total_paid_amount');

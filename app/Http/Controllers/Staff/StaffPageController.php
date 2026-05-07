@@ -482,7 +482,8 @@ class StaffPageController extends Controller
 
     private function attendanceForDate(string $date): Collection
     {
-        return collect(DB::select('CALL get_attendances_by_date(?)', [$date]))
+        return Attendance::forDateWithDetails($date)
+            ->get()
             ->map(function (object $attendance): object {
                 $attendance->check_in_time = $attendance->check_in_time ? Carbon::parse($attendance->check_in_time) : null;
                 $attendance->check_out_time = $attendance->check_out_time ? Carbon::parse($attendance->check_out_time) : null;

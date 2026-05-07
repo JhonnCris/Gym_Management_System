@@ -129,8 +129,8 @@ class AdminPageController extends Controller
             'revenueOverview' => $this->buildBarChartData($revenueOverview, 'amount'),
             'peakHourAnalysis' => $this->buildLineChartData($peakHourAnalysis, 'visits'),
             'quickStats' => $quickStats,
-            'recentPayments' => DB::table('member_payment_summary')
-                ->latest('payment_date')
+            'recentPayments' => Payment::summaryQuery()
+                ->latest('payments.payment_date')
                 ->take(5)
                 ->get()
                 ->map(function (object $payment): object {
@@ -200,8 +200,9 @@ class AdminPageController extends Controller
     {
         $this->ensureDashboardDataExists();
 
-        $attendanceRecords = DB::table('attendance_recent_view')
-            ->latest('check_in_time')
+        $attendanceRecords = Attendance::query()
+            ->withDetails()
+            ->latest('attendances.check_in_time')
             ->paginate(15);
 
         $attendanceRecords->getCollection()->transform(function (object $attendance): object {
@@ -361,10 +362,7 @@ class AdminPageController extends Controller
                 ];
             });
 
-        $failedPayments = DB::table('failed_payments_recent_view')
-            ->latest('payment_date')
-            ->limit(5)
-            ->get()
+        $failedPayments = Payment::recentFailedPayments(5)
             ->map(function (object $payment): array {
                 return [
                     'title' => 'Failed Payment',

@@ -8,6 +8,7 @@ use App\Models\GymClass;
 use App\Models\Member;
 use App\Models\Payment;
 use App\Models\User;
+use App\Models\Attendance;
 use App\Support\MembershipPlanCatalog;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
@@ -163,9 +164,7 @@ class MemberPageController extends Controller
         $allPayments = $this->memberPayments($member->member_id);
         $latestPaid = $allPayments->firstWhere('status', 'Paid') ?: $allPayments->first();
         $paidPayments = $allPayments->where('status', 'Paid');
-        $paymentMethods = DB::table('payment_methods_view')
-            ->orderBy('payment_method')
-            ->pluck('payment_method')
+        $paymentMethods = Payment::availableMethods()
             ->filter(fn ($method) => in_array($method, ['GCash', 'Card'], true))
             ->values()
             ->all();
@@ -279,7 +278,10 @@ class MemberPageController extends Controller
 
     private function memberPayments(int $memberId)
     {
-        return collect(DB::select('CALL get_member_payments(?)', [$memberId]))
+        return Payment::summaryQuery()
+            ->where('payments.member_id', $memberId)
+            ->orderByDesc('payments.payment_date')
+            ->get()
             ->map(function (object $payment): object {
                 $payment->status = $payment->payment_status;
                 $payment->payment_date = $payment->payment_date ? Carbon::parse($payment->payment_date) : null;
@@ -291,7 +293,8 @@ class MemberPageController extends Controller
 
     private function memberAttendances(int $memberId)
     {
-        return collect(DB::select('CALL get_member_attendances(?)', [$memberId]))
+        return Attendance::forMemberWithDetails($memberId)
+            ->get()
             ->map(function (object $attendance): object {
                 $attendance->check_in_time = $attendance->check_in_time ? Carbon::parse($attendance->check_in_time) : null;
                 $attendance->check_out_time = $attendance->check_out_time ? Carbon::parse($attendance->check_out_time) : null;

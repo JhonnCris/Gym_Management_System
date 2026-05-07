@@ -145,7 +145,7 @@ class SampleGymDataSeeder extends Seeder
                 [
                     'name' => 'Spin Bike Elite',
                     'quantity' => 12,
-                    'status' => 'In Use',
+                    'status' => 'Under Repair',
                     'description' => 'Indoor cycling bikes used in spin classes.',
                 ],
                 [

@@ -51,6 +51,53 @@ class Payment extends Model
         return $this->belongsTo(MembershipPlan::class, 'requested_membership_plan_id', 'mem_plan_id');
     }
 
+    public static function summaryQuery(): Builder
+    {
+        return self::query()
+            ->join('members', 'payments.member_id', '=', 'members.member_id')
+            ->join('users', 'members.user_id', '=', 'users.id')
+            ->select([
+                'payments.payment_id',
+                'payments.member_id',
+                'users.id as user_id',
+                'users.full_name as member_name',
+                'users.email as member_email',
+                'members.membership_type',
+                'members.status as member_status',
+                'members.join_date',
+                'members.expiry_date',
+                'payments.amount',
+                'payments.payment_method',
+                'payments.reference_number',
+                'payments.gcash_number',
+                'payments.gcash_image_path',
+                'payments.requested_membership_type',
+                'payments.status as payment_status',
+                'payments.payment_date',
+                'payments.reviewed_at',
+                'payments.reviewed_by_user_id',
+            ]);
+    }
+
+    public static function availableMethods()
+    {
+        return self::query()
+            ->whereNotNull('payment_method')
+            ->distinct()
+            ->orderBy('payment_method')
+            ->pluck('payment_method');
+    }
+
+    public static function recentFailedPayments(int $limit = 5, int $recentDays = 14)
+    {
+        return self::summaryQuery()
+            ->where('payments.status', 'Failed')
+            ->whereDate('payments.payment_date', '>=', now()->subDays($recentDays)->toDateString())
+            ->orderByDesc('payments.payment_date')
+            ->limit($limit)
+            ->get();
+    }
+
     /**
      * Get pending payments view (replaces pending_payments_view)
      */

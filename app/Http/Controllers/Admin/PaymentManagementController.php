@@ -19,21 +19,19 @@ class PaymentManagementController extends Controller
         $status = $request->query('status', 'All');
         $method = $request->query('method', 'All');
 
-        $payments = DB::table('member_payment_summary as summary')
-            ->join('payments', 'payments.payment_id', '=', 'summary.payment_id')
-            ->select('summary.*', 'payments.gcash_image_path')
+        $payments = Payment::summaryQuery()
             ->when($search !== '', function ($query) use ($search): void {
                 $query->where(function ($inner) use ($search): void {
-                    $inner->where('summary.payment_id', 'like', "%{$search}%")
-                        ->orWhere('summary.member_id', 'like', "%{$search}%")
-                        ->orWhere('summary.payment_method', 'like', "%{$search}%")
-                        ->orWhere('summary.member_name', 'like', "%{$search}%")
-                        ->orWhere('summary.member_email', 'like', "%{$search}%");
+                    $inner->where('payments.payment_id', 'like', "%{$search}%")
+                        ->orWhere('payments.member_id', 'like', "%{$search}%")
+                        ->orWhere('payments.payment_method', 'like', "%{$search}%")
+                        ->orWhere('users.full_name', 'like', "%{$search}%")
+                        ->orWhere('users.email', 'like', "%{$search}%");
                 });
             })
-            ->when($status !== 'All', fn ($q) => $q->where('summary.payment_status', $status))
-            ->when($method !== 'All', fn ($q) => $q->where('summary.payment_method', $method))
-            ->latest('summary.payment_date')
+            ->when($status !== 'All', fn ($q) => $q->where('payments.status', $status))
+            ->when($method !== 'All', fn ($q) => $q->where('payments.payment_method', $method))
+            ->latest('payments.payment_date')
             ->paginate(10)
             ->through(function (object $payment): array {
                 $paymentDate = $payment->payment_date ? Carbon::parse($payment->payment_date) : null;
@@ -62,13 +60,11 @@ class PaymentManagementController extends Controller
         $stats = [
             'total_revenue' => Payment::getTotalPaidAmount(),
             'pending_count' => Payment::getPendingCount(),
-            'pending_total' => (float) DB::table('member_payment_summary')->where('payment_status', 'Pending')->sum('amount'),
-            'failed_count' => (int) DB::table('member_payment_summary')->where('payment_status', 'Failed')->count(),
+            'pending_total' => (float) Payment::query()->where('status', 'Pending')->sum('amount'),
+            'failed_count' => (int) Payment::query()->where('status', 'Failed')->count(),
         ];
 
-        $methods = DB::table('payment_methods_view')
-            ->orderBy('payment_method')
-            ->pluck('payment_method');
+        $methods = Payment::availableMethods();
 
         return response()->json([
             'payments' => $payments,
