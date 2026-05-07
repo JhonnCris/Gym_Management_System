@@ -8,11 +8,54 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Member\MemberPageController;
 use App\Http\Controllers\Staff\StaffPageController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('welcome');
 })->name('welcome');
+
+Route::get('/ops/db-check', function (Request $request) {
+    $token = (string) env('OPS_TOKEN', '');
+
+    abort_unless($token !== '' && hash_equals($token, (string) $request->query('token', '')), 403);
+
+    $default = config('database.default');
+    $connection = config("database.connections.{$default}", []);
+
+    return response()->json([
+        'default_connection' => $default,
+        'resolved_driver' => $connection['driver'] ?? null,
+        'resolved_host' => $connection['host'] ?? null,
+        'resolved_port' => $connection['port'] ?? null,
+        'resolved_database' => $connection['database'] ?? null,
+        'tables_count' => count(DB::select('SHOW TABLES')),
+    ]);
+});
+
+Route::get('/ops/run-migrate', function (Request $request) {
+    $token = (string) env('OPS_TOKEN', '');
+
+    abort_unless($token !== '' && hash_equals($token, (string) $request->query('token', '')), 403);
+
+    Artisan::call('config:clear');
+
+    $database = (string) env('DB_CONNECTION', 'mysql');
+    $exitCode = Artisan::call('migrate', [
+        '--force' => true,
+        '--database' => $database,
+    ]);
+
+    return response()->json([
+        'exit_code' => $exitCode,
+        'database' => $database,
+        'output' => Artisan::output(),
+        'tables_count' => count(DB::select('SHOW TABLES')),
+    ]);
+});
+
 Route::post('/login', [LoginController::class, 'store'])->name('login.store');
 Route::post('/register', [RegisterController::class, 'store'])->name('register.store');
 Route::post('/forgot-password', [ForgotPasswordController::class, 'store'])->name('password.forgot');
@@ -23,12 +66,11 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/users', [AdminPageController::class, 'users'])->name('users');
     Route::get('/payments', [AdminPageController::class, 'payments'])->name('payments');
     Route::get('/classes', [AdminPageController::class, 'classes'])->name('classes');
-    Route::post('/classes', [AdminPageController::class, 'storeClass'])->name('classes.store');
     Route::get('/attendance', [AdminPageController::class, 'attendance'])->name('attendance');
     Route::get('/equipment', [AdminPageController::class, 'equipment'])->name('equipment');
-    Route::post('/equipment', [AdminPageController::class, 'storeEquipment'])->name('equipment.store');
     Route::get('/reports', [AdminPageController::class, 'reports'])->name('reports');
     Route::get('/notifications/data', [AdminPageController::class, 'notifications'])->name('notifications.data');
+
 
     Route::prefix('users')->name('users.')->group(function (): void {
         Route::get('/data', [UserManagementController::class, 'index'])->name('data');
@@ -52,10 +94,15 @@ Route::middleware(['auth', 'staff'])->prefix('staff')->name('staff.')->group(fun
     Route::get('/dashboard', [StaffPageController::class, 'dashboard'])->name('dashboard');
     Route::get('/check-in', [StaffPageController::class, 'checkin'])->name('checkin');
     Route::post('/check-in/submit', [StaffPageController::class, 'storeCheckin'])->name('checkin.store');
+    Route::post('/check-in/quick-checkout', [StaffPageController::class, 'quickCheckout'])->name('checkin.quick-checkout');
     Route::get('/classes', [StaffPageController::class, 'classes'])->name('classes');
+    Route::post('/classes', [StaffPageController::class, 'storeClass'])->name('classes.store');
     Route::post('/classes/{gymClass:class_id}/assign-trainer', [StaffPageController::class, 'assignTrainer'])->name('classes.assign-trainer');
     Route::get('/members', [StaffPageController::class, 'members'])->name('members');
     Route::get('/equipment', [StaffPageController::class, 'equipment'])->name('equipment');
+    Route::post('/equipment', [StaffPageController::class, 'storeEquipment'])->name('equipment.store');
+
+
 });
 
 Route::middleware(['auth', 'member'])->prefix('member')->name('member.')->group(function (): void {
