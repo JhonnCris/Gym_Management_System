@@ -9,6 +9,10 @@
         </div>
     </section>
 
+    @if (session('success'))
+        <div class="alert success">{{ session('success') }}</div>
+    @endif
+
     @if (session('staff_notice'))
         <div class="alert success">{{ session('staff_notice') }}</div>
     @endif
@@ -16,6 +20,75 @@
     @if ($errors->has('trainer_assignment') || $errors->has('trainer_id'))
         <div class="alert danger">{{ $errors->first('trainer_assignment') ?: $errors->first('trainer_id') }}</div>
     @endif
+
+    <section class="section-card">
+        <div class="section-heading">
+            <span class="inline-icon">@include('staff.partials.icon', ['name' => 'plus'])</span>
+            <strong>Add New Class</strong>
+        </div>
+
+        <form method="POST" action="{{ route('staff.classes.store') }}" class="field-grid">
+            @csrf
+
+            <div class="field">
+                <label for="class_name">Class name</label>
+                <input id="class_name" name="class_name" type="text" value="{{ old('class_name') }}" class="{{ $errors->has('class_name') ? 'input-invalid' : '' }}">
+                @error('class_name')<div class="field-error">{{ $message }}</div>@enderror
+            </div>
+
+            <div class="field">
+                <label for="schedule_time">Schedule</label>
+                <input id="schedule_time" name="schedule_time" type="datetime-local" value="{{ old('schedule_time') }}" class="{{ $errors->has('schedule_time') ? 'input-invalid' : '' }}">
+                @error('schedule_time')<div class="field-error">{{ $message }}</div>@enderror
+            </div>
+
+            <div class="field">
+                <label for="max_slots">Max slots</label>
+                <input id="max_slots" name="max_slots" type="number" min="1" value="{{ old('max_slots', 10) }}" class="{{ $errors->has('max_slots') ? 'input-invalid' : '' }}">
+                @error('max_slots')<div class="field-error">{{ $message }}</div>@enderror
+            </div>
+
+            <div class="field">
+                <button type="submit" class="btn primary">Create class</button>
+            </div>
+        </form>
+
+        <style>
+            .field-grid {
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 14px;
+                margin-top: 16px;
+            }
+            .field-grid .field {
+                display: flex;
+                flex-direction: column;
+            }
+            .field-grid .field label {
+                margin-bottom: 4px;
+                font-weight: 600;
+            }
+            .field-grid .field input {
+                padding: 8px;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+            }
+            .field-grid .field input.input-invalid {
+                border-color: #dc3545;
+            }
+            .field-grid .field .field-error {
+                color: #dc3545;
+                font-size: 0.875rem;
+                margin-top: 0.25rem;
+            }
+            .field-grid .field:last-child {
+                grid-column: span 3;
+                display: flex;
+                justify-content: flex-end;
+                align-items: flex-end;
+            }
+        </style>
+    </section>
 
     <section class="class-stack">
         @forelse ($classes as $class)
@@ -72,5 +145,10 @@
         @empty
             <div class="panel-card empty-state">No upcoming classes are available for trainer assignment right now.</div>
         @endforelse
+        @if ($classes->hasPages())
+            <div class="pagination">
+                {{ $classes->links() }}
+            </div>
+        @endif
     </section>
 @endsection

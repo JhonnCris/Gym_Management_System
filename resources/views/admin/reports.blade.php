@@ -30,7 +30,14 @@
                     <select class="select" id="reportFormatSelect">
                         <option value="csv">CSV</option>
                         <option value="pdf">PDF</option>
+                        <option value="md">Markdown</option>
                     </select>
+                </div>
+                <div class="field-inline">
+                    <button class="btn secondary" type="button" data-report-export="all-reports">
+                        <span class="button-icon">@include('admin.partials.icon', ['name' => 'export'])</span>
+                        <span>Export Full Report</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -160,10 +167,14 @@
             'growthRows' => $growthRows,
             'peakHoursRows' => $peakHoursRows,
             'distributionRows' => $distributionRows,
+            'attendanceRows' => $attendanceRows,
             'generatedAt' => now()->format('M d, Y h:i A'),
             'gymName' => 'WeDumbell Gym Management System',
+            'exportedBy' => auth()->user()?->full_name ?? auth()->user()?->email ?? 'Administrator',
         ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}
     </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="{{ asset('js/admin-reports.js') }}?v={{ filemtime(public_path('js/admin-reports.js')) }}"></script>
 @endsection

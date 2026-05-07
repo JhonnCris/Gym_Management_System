@@ -8,7 +8,7 @@
         <article class="surface-card profile-identity">
             <div class="profile-avatar">{{ strtoupper(substr($user->full_name ?? 'M', 0, 1)) }}</div>
             <h2>{{ $user->full_name }}</h2>
-            <p class="profile-id">Member ID M{{ str_pad((string) $member->member_id, 4, '0', STR_PAD_LEFT) }}</p>
+            <p class="profile-id">Member ID M{{ str_pad((string) $member->member_id, 3, '0', STR_PAD_LEFT) }}</p>
             <span class="status-badge {{ strtolower($member->status ?? 'active') }}">{{ $member->status ?? 'Active' }}</span>
 
             <dl class="info-grid single">

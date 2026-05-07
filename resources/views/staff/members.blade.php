@@ -69,6 +69,11 @@
                 </tbody>
             </table>
         </div>
+        @if ($members->hasPages())
+            <div class="pagination">
+                {{ $members->links() }}
+            </div>
+        @endif
     </section>
 @endsection
 

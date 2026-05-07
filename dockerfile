@@ -37,6 +37,8 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www/html
 # Copy full Laravel app
 COPY . .
+RUN sed -i 's/\r$//' docker/start.sh
+RUN chmod +x docker/start.sh
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 # Install frontend dependencies and build Vite assets
@@ -50,6 +52,7 @@ RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framewor
 && chown -R www-data:www-data storage bootstrap/cache public/uploads \
 && chmod -R 775 storage bootstrap/cache public/uploads
 EXPOSE 10000
+ENTRYPOINT ["/bin/sh", "/var/www/html/docker/start.sh"]
 CMD ["apache2-foreground"]
 
 

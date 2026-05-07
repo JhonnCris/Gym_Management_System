@@ -71,5 +71,10 @@
                 </tbody>
             </table>
         </div>
+        @if ($attendanceRecords->hasPages())
+            <div class="pagination">
+                {{ $attendanceRecords->links() }}
+            </div>
+        @endif
     </section>
 @endsection

@@ -131,6 +131,11 @@
                 <div class="empty-state">No future classes are currently open for booking.</div>
             @endforelse
         </div>
+        @if ($availableClasses->hasPages())
+            <div class="pagination">
+                {{ $availableClasses->links() }}
+            </div>
+        @endif
     </section>
 
     <section class="surface-card">
@@ -163,6 +168,11 @@
                 <div class="empty-state">No previous class records found for this member yet.</div>
             @endforelse
         </div>
+        @if ($bookingHistory->hasPages())
+            <div class="pagination">
+                {{ $bookingHistory->links() }}
+            </div>
+        @endif
     </section>
 
     <div class="member-toast" id="memberClassToast" hidden></div>

@@ -158,6 +158,11 @@
                 </tbody>
             </table>
         </div>
+        @if ($payments->hasPages())
+            <div class="pagination">
+                {{ $payments->links() }}
+            </div>
+        @endif
     </section>
 
     <div class="member-toast" id="memberPaymentToast" hidden></div>
