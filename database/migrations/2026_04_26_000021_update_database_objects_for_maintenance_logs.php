@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\ManagedSqlFunctions;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
@@ -39,9 +40,9 @@ return new class extends Migration
         SQL);
 
         // Drop and recreate the get_equipment_issues_count function
-        DB::unprepared('DROP FUNCTION IF EXISTS `get_equipment_issues_count`');
+        ManagedSqlFunctions::run('DROP FUNCTION IF EXISTS `get_equipment_issues_count`', 'drop function get_equipment_issues_count');
 
-        DB::unprepared(<<<'SQL'
+        ManagedSqlFunctions::run(<<<'SQL'
             CREATE FUNCTION get_equipment_issues_count() RETURNS INT
             READS SQL DATA
             BEGIN
@@ -56,7 +57,7 @@ return new class extends Migration
 
                 RETURN equipment_count;
             END
-        SQL);
+        SQL, 'create function get_equipment_issues_count');
     }
 
     /**
@@ -95,9 +96,9 @@ return new class extends Migration
         SQL);
 
         // Recreate the original function
-        DB::unprepared('DROP FUNCTION IF EXISTS `get_equipment_issues_count`');
+        ManagedSqlFunctions::run('DROP FUNCTION IF EXISTS `get_equipment_issues_count`', 'drop function get_equipment_issues_count');
 
-        DB::unprepared(<<<'SQL'
+        ManagedSqlFunctions::run(<<<'SQL'
             CREATE FUNCTION get_equipment_issues_count() RETURNS INT
             READS SQL DATA
             BEGIN
@@ -111,6 +112,6 @@ return new class extends Migration
 
                 RETURN equipment_count;
             END
-        SQL);
+        SQL, 'create function get_equipment_issues_count');
     }
 };

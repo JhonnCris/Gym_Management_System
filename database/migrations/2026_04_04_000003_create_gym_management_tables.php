@@ -33,7 +33,7 @@ return new class extends Migration
             $table->id('equipment_id');
             $table->string('name', 100);
             $table->unsignedInteger('quantity')->default(0);
-            $table->enum('status', ['Available', 'In Use', 'Maintenance'])->default('Available');
+            $table->enum('status', ['Available', 'Under Repair', 'Maintenance'])->default('Available');
             $table->enum('condition_status', ['Good', 'Damaged', 'Under Repair'])->default('Good');
             $table->date('last_maintenance_date')->nullable();
             $table->text('description')->nullable();

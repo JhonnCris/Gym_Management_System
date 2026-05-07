@@ -9,6 +9,7 @@ use App\Models\GymClass;
 use App\Models\Member;
 use App\Models\Payment;
 use App\Models\User;
+use App\Support\DatabaseMetrics;
 use Database\Seeders\SampleGymDataSeeder;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -33,18 +34,12 @@ class AdminPageController extends Controller
         $previousUsers = User::query()
             ->whereDate('created_at', '<', $monthStart->toDateString())
             ->count();
-        $activeToday = (int) ($this->scalar('SELECT get_today_unique_members_count() AS value') ?? 0);
-        $todayClassCount = (int) ($this->scalar('SELECT get_classes_today_count() AS value') ?? 0);
-        $currentRevenue = (float) ($this->scalar(
-            'SELECT get_month_revenue(?, ?) AS value',
-            [$monthStart->year, $monthStart->month]
-        ) ?? 0);
-        $previousRevenue = (float) ($this->scalar(
-            'SELECT get_month_revenue(?, ?) AS value',
-            [$previousMonthStart->year, $previousMonthStart->month]
-        ) ?? 0);
-        $pendingPayments = (int) ($this->scalar('SELECT get_pending_count() AS value') ?? 0);
-        $equipmentIssues = (int) ($this->scalar('SELECT get_equipment_issues_count() AS value') ?? 0);
+        $activeToday = DatabaseMetrics::todayUniqueMembersCount();
+        $todayClassCount = DatabaseMetrics::classesTodayCount();
+        $currentRevenue = DatabaseMetrics::monthRevenue($monthStart->year, $monthStart->month);
+        $previousRevenue = DatabaseMetrics::monthRevenue($previousMonthStart->year, $previousMonthStart->month);
+        $pendingPayments = Payment::getPendingCount();
+        $equipmentIssues = DatabaseMetrics::equipmentIssuesCount();
 
         $membershipGrowth = collect(range(5, 0, -1))
             ->prepend(0)
@@ -61,9 +56,7 @@ class AdminPageController extends Controller
                 ];
             });
 
-        $membershipTypes = DB::table('membership_distribution_view')
-            ->orderByDesc('aggregate')
-            ->get()
+        $membershipTypes = User::getMembershipDistribution()
             ->map(fn ($row): array => [
                 'label' => $row->membership_type ?: 'Unassigned',
                 'count' => (int) $row->aggregate,
@@ -78,10 +71,7 @@ class AdminPageController extends Controller
 
                 return [
                     'label' => $date->format('M'),
-                    'amount' => (float) ($this->scalar(
-                        'SELECT get_month_revenue(?, ?) AS value',
-                        [$start->year, $start->month]
-                    ) ?? 0),
+                    'amount' => DatabaseMetrics::monthRevenue($start->year, $start->month),
                 ];
             });
 
@@ -165,7 +155,7 @@ class AdminPageController extends Controller
     {
         $this->ensureDashboardDataExists();
 
-        $classes = DB::table('classes_with_bookings_view')
+        $allClasses = GymClass::withBookings()
             ->orderBy('schedule_time')
             ->get()
             ->map(function (object $class) {
@@ -191,30 +181,19 @@ class AdminPageController extends Controller
                 return $class;
             });
 
+        $classes = $this->paginateCollection($allClasses, 15, 'admin_classes_page');
+
         return view('admin.classes', [
             'classes' => $classes,
             'stats' => [
-                'total_classes' => $classes->count(),
-                'upcoming_classes' => $classes->where('schedule_time', '>=', now())->count(),
-                'todays_classes' => $classes->filter(fn ($class) => $class->schedule_time->isToday())->count(),
-                'bookings' => $classes->sum('bookings_count'),
-                'average_fill_rate' => $classes->isEmpty() ? 0 : (int) round($classes->avg('fill_rate')),
-                'near_capacity' => $classes->where('fill_rate', '>=', 80)->count(),
+                'total_classes' => $allClasses->count(),
+                'upcoming_classes' => $allClasses->filter(fn ($class) => $class->schedule_time && $class->schedule_time->gte(now()))->count(),
+                'todays_classes' => $allClasses->filter(fn ($class) => $class->schedule_time && $class->schedule_time->isToday())->count(),
+                'bookings' => $allClasses->sum('bookings_count'),
+                'average_fill_rate' => $allClasses->isEmpty() ? 0 : (int) round($allClasses->avg('fill_rate')),
+                'near_capacity' => $allClasses->filter(fn ($class) => $class->fill_rate >= 80)->count(),
             ],
         ]);
-    }
-
-    public function storeClass(Request $request): RedirectResponse
-    {
-        $validated = $request->validate([
-            'class_name' => 'required|string|max:120',
-            'schedule_time' => 'required|date_format:Y-m-d\TH:i',
-            'max_slots' => 'required|integer|min:1',
-        ]);
-
-        GymClass::create($validated);
-
-        return redirect()->route('admin.classes')->with('success', 'New class added successfully.');
     }
 
     public function attendance(): View
@@ -223,23 +202,24 @@ class AdminPageController extends Controller
 
         $attendanceRecords = DB::table('attendance_recent_view')
             ->latest('check_in_time')
-            ->get()
-            ->map(function (object $attendance): object {
-                $attendance->check_in_time = $attendance->check_in_time ? Carbon::parse($attendance->check_in_time) : null;
-                $attendance->check_out_time = $attendance->check_out_time ? Carbon::parse($attendance->check_out_time) : null;
+            ->paginate(15);
 
-                return $attendance;
-            });
+        $attendanceRecords->getCollection()->transform(function (object $attendance): object {
+            $attendance->check_in_time = $attendance->check_in_time ? Carbon::parse($attendance->check_in_time) : null;
+            $attendance->check_out_time = $attendance->check_out_time ? Carbon::parse($attendance->check_out_time) : null;
+
+            return $attendance;
+        });
 
         $weekStart = now()->startOfWeek();
 
         return view('admin.attendance', [
             'attendanceRecords' => $attendanceRecords,
             'stats' => [
-                'today_total' => (int) ($this->scalar('SELECT get_today_attendance_count() AS value') ?? 0),
-                'today_unique_members' => (int) ($this->scalar('SELECT get_today_unique_members_count() AS value') ?? 0),
-                'currently_in' => (int) ($this->scalar('SELECT get_currently_in_count() AS value') ?? 0),
-                'week_total' => (int) ($this->scalar('SELECT get_week_attendance_count() AS value') ?? 0),
+                'today_total' => DatabaseMetrics::todayAttendanceCount(),
+                'today_unique_members' => DatabaseMetrics::todayUniqueMembersCount(),
+                'currently_in' => DatabaseMetrics::currentlyInCount(),
+                'week_total' => DatabaseMetrics::weekAttendanceCount(),
                 'classes_touched' => Attendance::query()->where('check_in_time', '>=', $weekStart)->distinct('class_id')->count('class_id'),
             ],
         ]);
@@ -249,7 +229,7 @@ class AdminPageController extends Controller
     {
         $this->ensureDashboardDataExists();
 
-        $equipmentItems = DB::table('equipment_with_classes_view')
+        $allEquipment = Equipment::withClasses()
             ->orderBy('name')
             ->get()
             ->map(function (object $equipment): object {
@@ -260,30 +240,18 @@ class AdminPageController extends Controller
                 return $equipment;
             });
 
+        $equipmentItems = $this->paginateCollection($allEquipment, 15, 'admin_equipment_page');
+
         return view('admin.equipment', [
             'equipmentItems' => $equipmentItems,
             'stats' => [
-                'tracked_items' => $equipmentItems->count(),
-                'total_units' => (int) $equipmentItems->sum('quantity'),
-                'available_items' => $equipmentItems->where('status', 'Available')->count(),
-                'attention_items' => (int) ($this->scalar('SELECT get_equipment_issues_count() AS value') ?? 0),
-                'linked_to_classes' => $equipmentItems->where('classes_count', '>', 0)->count(),
+                'tracked_items' => $allEquipment->count(),
+                'total_units' => (int) $allEquipment->sum('quantity'),
+                'available_items' => $allEquipment->where('status', 'Available')->count(),
+                'attention_items' => DatabaseMetrics::equipmentIssuesCount(),
+                'linked_to_classes' => $allEquipment->where('classes_count', '>', 0)->count(),
             ],
         ]);
-    }
-
-    public function storeEquipment(Request $request): RedirectResponse
-    {
-        $validated = $request->validate([
-            'name' => 'required|string|max:120',
-            'quantity' => 'required|integer|min:1',
-            'status' => 'required|string|in:Available,In Use,Maintenance',
-            'description' => 'nullable|string|max:500',
-        ]);
-
-        Equipment::create($validated);
-
-        return redirect()->route('admin.equipment')->with('success', 'Equipment item added successfully.');
     }
 
     public function reports(): View
@@ -304,10 +272,7 @@ class AdminPageController extends Controller
                     'members' => Member::query()
                         ->whereBetween('join_date', [$start->toDateString(), $end->toDateString()])
                         ->count(),
-                    'revenue' => (float) ($this->scalar(
-                        'SELECT get_month_revenue(?, ?) AS value',
-                        [$start->year, $start->month]
-                    ) ?? 0),
+                    'revenue' => DatabaseMetrics::monthRevenue($start->year, $start->month),
                 ];
             });
 
@@ -332,21 +297,36 @@ class AdminPageController extends Controller
             ];
         });
 
-        $membershipDistribution = DB::table('membership_distribution_view')
-            ->orderByDesc('aggregate')
-            ->get()
+        $membershipDistribution = User::getMembershipDistribution()
             ->map(fn ($row): array => [
                 'label' => $row->membership_type ?: 'Unassigned',
                 'count' => (int) $row->aggregate,
             ]);
 
+        $attendanceRows = Attendance::query()
+            ->with(['member.user', 'gymClass'])
+            ->orderByDesc('check_in_time')
+            ->limit(12)
+            ->get()
+            ->map(function (Attendance $attendance): array {
+                return [
+                    'member_name' => $attendance->member?->user?->full_name ?? 'Unknown member',
+                    'class_name' => $attendance->gymClass?->name ?? 'Walk-in / N/A',
+                    'check_in_time' => optional($attendance->check_in_time)->format('M d, Y h:i A') ?? 'N/A',
+                    'check_out_time' => optional($attendance->check_out_time)->format('M d, Y h:i A') ?? 'N/A',
+                    'status' => $attendance->check_out_time ? 'Checked Out' : 'In Gym',
+                ];
+            })
+            ->values()
+            ->all();
+
         $reportStats = [
             'top_revenue_month' => $growthData->sortByDesc('revenue')->first(),
             'top_peak_slot' => $peakHours->sortByDesc('visits')->first(),
             'top_membership' => $membershipDistribution->sortByDesc('count')->first(),
-            'total_revenue' => (float) ($this->scalar('SELECT get_total_paid_amount() AS value') ?? 0),
-            'total_visits' => (int) ($this->scalar('SELECT get_total_attendances() AS value') ?? 0),
-            'member_count' => (int) ($this->scalar('SELECT get_total_members() AS value') ?? 0),
+            'total_revenue' => Payment::getTotalPaidAmount(),
+            'total_visits' => DatabaseMetrics::totalAttendances(),
+            'member_count' => DatabaseMetrics::totalMembers(),
         ];
 
         return view('admin.reports', [
@@ -356,6 +336,7 @@ class AdminPageController extends Controller
             'peakHoursRows' => $peakHours->values()->all(),
             'membershipDistribution' => $this->buildDonutChartData($membershipDistribution),
             'distributionRows' => $membershipDistribution->values()->all(),
+            'attendanceRows' => $attendanceRows,
             'reportStats' => $reportStats,
         ]);
     }
@@ -364,16 +345,16 @@ class AdminPageController extends Controller
     {
         $now = now();
 
-        $pendingPayments = DB::table('pending_payments_view')
+        $pendingPayments = Payment::pendingPayments()
             ->latest('payment_date')
             ->limit(8)
             ->get()
             ->map(function (object $payment): array {
                 return [
                     'title' => 'Payment Review Required',
-                    'message' => ($payment->member_name ?? ('Member #'.$payment->member_id))
+                    'message' => ($payment->full_name ?? ('Member #'.$payment->member_id))
                         .' submitted '
-                        .($payment->requested_membership_type ?: 'a membership payment')
+                        .($payment->membership_type ?: 'a membership payment')
                         .' via '.($payment->payment_method ?: 'Unknown method').'.',
                     'type' => 'warning',
                     'created_at' => $payment->payment_date ? Carbon::parse($payment->payment_date)->toIso8601String() : now()->toIso8601String(),
@@ -556,10 +537,5 @@ class AdminPageController extends Controller
             'points' => $points,
             'polyline' => collect($points)->map(fn (array $point) => $point['x'].','.$point['y'])->implode(' '),
         ];
-    }
-
-    private function scalar(string $sql, array $bindings = []): mixed
-    {
-        return DB::selectOne($sql, $bindings)?->value;
     }
 }

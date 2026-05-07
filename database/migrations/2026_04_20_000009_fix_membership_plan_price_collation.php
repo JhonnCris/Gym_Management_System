@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\ManagedSqlFunctions;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
@@ -11,9 +12,9 @@ return new class extends Migration
             return;
         }
 
-        DB::unprepared('DROP FUNCTION IF EXISTS `get_membership_plan_price`');
+        ManagedSqlFunctions::run('DROP FUNCTION IF EXISTS `get_membership_plan_price`', 'drop function get_membership_plan_price');
 
-        DB::unprepared(<<<'SQL'
+        ManagedSqlFunctions::run(<<<'SQL'
             CREATE FUNCTION get_membership_plan_price(plan_name_param VARCHAR(50)) RETURNS DECIMAL(12,2)
             READS SQL DATA
             BEGIN
@@ -40,7 +41,7 @@ return new class extends Migration
 
                 RETURN COALESCE(plan_price, 0.00);
             END
-        SQL);
+        SQL, 'create function get_membership_plan_price');
     }
 
     public function down(): void
@@ -49,9 +50,9 @@ return new class extends Migration
             return;
         }
 
-        DB::unprepared('DROP FUNCTION IF EXISTS `get_membership_plan_price`');
+        ManagedSqlFunctions::run('DROP FUNCTION IF EXISTS `get_membership_plan_price`', 'drop function get_membership_plan_price');
 
-        DB::unprepared(<<<'SQL'
+        ManagedSqlFunctions::run(<<<'SQL'
             CREATE FUNCTION get_membership_plan_price(plan_name_param VARCHAR(50)) RETURNS DECIMAL(12,2)
             READS SQL DATA
             BEGIN
@@ -78,6 +79,6 @@ return new class extends Migration
 
                 RETURN COALESCE(plan_price, 0.00);
             END
-        SQL);
+        SQL, 'create function get_membership_plan_price');
     }
 };

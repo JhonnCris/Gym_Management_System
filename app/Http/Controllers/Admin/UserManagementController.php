@@ -59,8 +59,8 @@ class UserManagementController extends Controller
                         ->orWhere('id', 'like', "%{$search}%");
                 });
             })
-            ->when($role && $role !== 'All', fn ($q) => $q->where('user_role', $role))
-            ->when($status && $status !== 'All', fn ($q) => $q->where('user_status', $status))
+            ->when($role && $role !== 'All', fn ($q) => $q->where('users.role', $role))
+            ->when($status && $status !== 'All', fn ($q) => $q->where('users.status', $status))
             ->orderByDesc('id');
 
         $users = $query->paginate(10)->through(function (object $user): array {

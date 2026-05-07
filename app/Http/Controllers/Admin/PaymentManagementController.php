@@ -60,8 +60,8 @@ class PaymentManagementController extends Controller
             });
 
         $stats = [
-            'total_revenue' => (float) (DB::selectOne('SELECT get_total_paid_amount() AS value')->value ?? 0),
-            'pending_count' => (int) (DB::selectOne('SELECT get_pending_count() AS value')->value ?? 0),
+            'total_revenue' => Payment::getTotalPaidAmount(),
+            'pending_count' => Payment::getPendingCount(),
             'pending_total' => (float) DB::table('member_payment_summary')->where('payment_status', 'Pending')->sum('amount'),
             'failed_count' => (int) DB::table('member_payment_summary')->where('payment_status', 'Failed')->count(),
         ];

@@ -6,9 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\GymClass;
 use App\Models\Member;
+use App\Models\Equipment;
 use App\Models\Staff;
+use App\Models\User;
+use App\Support\DatabaseMetrics;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -22,7 +26,7 @@ class StaffPageController extends Controller
 
         return view('staff.dashboard', [
             'stats' => $this->checkInStats(),
-            'todaysClassesCount' => (int) ($this->scalar('SELECT get_classes_today_count() AS value') ?? 0),
+            'todaysClassesCount' => DatabaseMetrics::classesTodayCount(),
             'todaysSchedule' => $classes->take(5),
             'recentCheckIns' => $this->attendanceForDate(today()->toDateString())->take(5),
         ]);
@@ -32,6 +36,43 @@ class StaffPageController extends Controller
     {
         $lookup = trim((string) $request->query('lookup'));
         $memberPreview = $lookup !== '' ? $this->findMember($lookup) : null;
+
+        // Get all active members (currently in gym)
+        $activeMembersData = collect(DB::select('
+            SELECT 
+                m.member_id,
+                u.full_name,
+                m.membership_type,
+                a.attendance_id,
+                a.check_in_time,
+                c.class_name
+            FROM attendances a
+            JOIN members m ON a.member_id = m.member_id
+            JOIN users u ON m.user_id = u.id
+            LEFT JOIN classes c ON a.class_id = c.class_id
+            WHERE DATE(a.check_in_time) = CURDATE()
+            AND a.check_out_time IS NULL
+            ORDER BY a.check_in_time DESC
+        '))->map(function (object $item): object {
+            $item->check_in_time = $item->check_in_time ? Carbon::parse($item->check_in_time) : null;
+            return $item;
+        });
+
+        // Get all active members for dropdown
+        $allMembers = collect(DB::select('
+            SELECT 
+                m.member_id,
+                u.full_name,
+                m.membership_type,
+                m.status,
+                u.status as user_status
+            FROM members m
+            JOIN users u ON m.user_id = u.id
+            WHERE m.status = "Active" AND u.status = "Active"
+            ORDER BY u.full_name ASC
+        '))->map(function (object $item): object {
+            return $item;
+        });
 
         return view('staff.check-in', [
             'stats' => $this->checkInStats(),
@@ -53,6 +94,8 @@ class StaffPageController extends Controller
                     ->first()
                 : null,
             'recentCheckIns' => $this->attendanceForDate(today()->toDateString())->take(6),
+            'activeMembers' => $activeMembersData,
+            'allMembers' => $allMembers,
         ]);
     }
 
@@ -126,15 +169,53 @@ class StaffPageController extends Controller
             ->with('staff_notice', $member->user->full_name.' checked in under '.$class->class_name.'.');
     }
 
+    public function quickCheckout(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'attendance_id' => ['required', 'exists:attendances,attendance_id'],
+        ]);
+
+        $attendance = Attendance::with(['member.user'])->findOrFail($validated['attendance_id']);
+
+        if ($attendance->check_out_time) {
+            return response()->json([
+                'message' => $attendance->member->user->full_name.' is already checked out.',
+            ], 422);
+        }
+
+        $attendance->update(['check_out_time' => now()]);
+
+        return response()->json([
+            'message' => $attendance->member->user->full_name.' has been checked out successfully.',
+            'success' => true,
+        ]);
+    }
+
     public function classes(): View
     {
         $staff = $this->currentStaff();
+        $classes = $this->upcomingClassesCollection($staff?->staff_id);
 
         return view('staff.classes', [
-            'classes' => $this->upcomingClassesCollection($staff?->staff_id),
+            'classes' => $this->paginateCollection($classes, 12, 'classes_page'),
             'staffMember' => $staff,
             'trainers' => $this->trainerOptions(),
         ]);
+    }
+
+    public function storeClass(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'class_name' => 'required|string|max:120',
+            'schedule_time' => 'required|date_format:Y-m-d\TH:i',
+            'max_slots' => 'required|integer|min:1',
+        ]);
+
+        GymClass::create($validated);
+
+        return redirect()
+            ->route('staff.classes')
+            ->with('success', 'New class created. Assign an instructor before it becomes visible to members.');
     }
 
     public function assignTrainer(Request $request, GymClass $gymClass): RedirectResponse
@@ -201,8 +282,8 @@ class StaffPageController extends Controller
     {
         $search = trim((string) $request->query('search'));
 
-        $members = DB::table('user_overview_view')
-            ->where('user_role', 'Member')
+        $members = User::withOverview()
+            ->where('users.role', 'Member')
             ->when($search !== '', function ($query) use ($search): void {
                 $query->where(function ($inner) use ($search): void {
                     $inner->where('member_id', $search)
@@ -213,8 +294,8 @@ class StaffPageController extends Controller
                 });
             })
             ->orderByDesc('member_id')
-            ->get()
-            ->map(function (object $member): object {
+            ->paginate(15)
+            ->through(function (object $member): object {
                 $member->last_visit_at = $member->last_visit_at ? Carbon::parse($member->last_visit_at) : null;
 
                 return $member;
@@ -230,14 +311,15 @@ class StaffPageController extends Controller
     {
         $search = trim((string) $request->query('search'));
 
-        $equipment = DB::table('equipment_with_classes_view')
+        $equipment = Equipment::withClasses()
             ->when($search !== '', function ($query) use ($search): void {
                 $query->where('name', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%");
+                    ->orWhere('description', 'like', "%{$search}%")
+                    ->orWhere('status', 'like', "%{$search}%");
             })
             ->orderBy('name')
-            ->get()
-            ->map(function (object $item): object {
+            ->paginate(15)
+            ->through(function (object $item): object {
                 $item->last_maintenance_date = $item->last_maintenance_date
                     ? Carbon::parse($item->last_maintenance_date)
                     : null;
@@ -245,7 +327,7 @@ class StaffPageController extends Controller
                 return $item;
             });
 
-        $issues = (int) ($this->scalar('SELECT get_equipment_issues_count() AS value') ?? 0);
+        $issues = DatabaseMetrics::equipmentIssuesCount();
 
         return view('staff.equipment', [
             'equipment' => $equipment,
@@ -256,8 +338,8 @@ class StaffPageController extends Controller
 
     private function checkInStats(): array
     {
-        $todayAttendance = (int) ($this->scalar('SELECT get_today_attendance_count() AS value') ?? 0);
-        $currentlyIn = (int) ($this->scalar('SELECT get_currently_in_count() AS value') ?? 0);
+        $todayAttendance = DatabaseMetrics::todayAttendanceCount();
+        $currentlyIn = DatabaseMetrics::currentlyInCount();
 
         return [
             'total' => $todayAttendance,
@@ -270,7 +352,7 @@ class StaffPageController extends Controller
     {
         $now = now();
 
-        return DB::table('classes_with_bookings_view')
+        return GymClass::withBookings()
             ->whereDate('schedule_time', today())
             ->orderBy('schedule_time')
             ->get()
@@ -312,7 +394,7 @@ class StaffPageController extends Controller
             ->groupBy('class_id')
             ->pluck('trainer_ids_csv', 'class_id');
 
-        return DB::table('classes_with_bookings_view')
+        return GymClass::withBookings()
             ->where('schedule_time', '>=', $now->copy()->subHour())
             ->orderBy('schedule_time')
             ->get()
@@ -342,9 +424,26 @@ class StaffPageController extends Controller
             ->values();
     }
 
+    public function storeEquipment(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:120',
+            'quantity' => 'required|integer|min:1',
+            'status' => 'required|string|in:Available,Under Repair,Maintenance',
+            'description' => 'nullable|string|max:500',
+        ]);
+
+        Equipment::create($validated);
+
+        return redirect()->route('staff.equipment')->with('success', 'Equipment item added successfully.');
+    }
+
     private function currentStaff(): ?Staff
     {
-        return auth()->user()?->staff;
+        /** @var User|null $user */
+        $user = request()->user();
+
+        return $user?->staff;
     }
 
     private function trainerOptions(): Collection
@@ -390,10 +489,5 @@ class StaffPageController extends Controller
 
                 return $attendance;
             });
-    }
-
-    private function scalar(string $sql, array $bindings = []): mixed
-    {
-        return DB::selectOne($sql, $bindings)?->value;
     }
 }

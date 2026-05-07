@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Member;
 
 use App\Http\Controllers\Controller;
+use App\Models\Booking;
+use App\Models\GymClass;
 use App\Models\Member;
 use App\Models\Payment;
 use App\Models\User;
@@ -103,8 +105,9 @@ class MemberPageController extends Controller
             ->filter(fn ($booking) => optional($booking->schedule_time)?->lt($now) || $booking->status !== 'Booked')
             ->values();
 
-        $availableClasses = DB::table('classes_with_bookings_view')
+        $availableClasses = GymClass::withBookings()
             ->where('schedule_time', '>=', $now)
+            ->havingRaw('COUNT(DISTINCT class_trainer.staff_id) > 0')
             ->orderBy('schedule_time')
             ->get()
             ->map(function (object $class): object {
@@ -119,6 +122,9 @@ class MemberPageController extends Controller
             })
             ->values();
 
+        $paginatedAvailableClasses = $this->paginateCollection($availableClasses, 12, 'available_page');
+        $paginatedBookingHistory = $this->paginateCollection($bookingHistory, 10, 'history_page');
+
         $bookingLimit = $this->membershipBookingLimit($member->membership_type);
         $hasReachedBookingLimit = $bookingLimit !== null && $upcomingBookedClasses->count() >= $bookingLimit;
 
@@ -127,8 +133,8 @@ class MemberPageController extends Controller
             'member' => $member,
             'bookedClassIds' => $activeBookedClassIds,
             'bookedClasses' => $upcomingBookedClasses,
-            'bookingHistory' => $bookingHistory,
-            'availableClasses' => $availableClasses,
+            'bookingHistory' => $paginatedBookingHistory,
+            'availableClasses' => $paginatedAvailableClasses,
             'bookingLimit' => $bookingLimit,
             'hasReachedBookingLimit' => $hasReachedBookingLimit,
             'classSummary' => [
@@ -154,10 +160,9 @@ class MemberPageController extends Controller
     {
         [$user, $member] = $this->memberContext();
 
-        $payments = $this->memberPayments($member->member_id);
-
-        $latestPaid = $payments->firstWhere('status', 'Paid') ?: $payments->first();
-        $paidPayments = $payments->where('status', 'Paid');
+        $allPayments = $this->memberPayments($member->member_id);
+        $latestPaid = $allPayments->firstWhere('status', 'Paid') ?: $allPayments->first();
+        $paidPayments = $allPayments->where('status', 'Paid');
         $paymentMethods = DB::table('payment_methods_view')
             ->orderBy('payment_method')
             ->pluck('payment_method')
@@ -168,7 +173,7 @@ class MemberPageController extends Controller
         return view('member.payments', [
             'user' => $user,
             'member' => $member,
-            'payments' => $payments,
+            'payments' => $this->paginateCollection($allPayments, 15, 'payments_page'),
             'latestPaid' => $latestPaid,
             'plans' => MembershipPlanCatalog::all(),
             'paymentMethods' => $paymentMethods ?: ['GCash', 'Card'],
@@ -183,6 +188,13 @@ class MemberPageController extends Controller
     public function subscribe(Request $request): JsonResponse
     {
         [, $member] = $this->memberContext();
+
+        // Check if current membership is still active
+        if ($member->expiry_date && $member->expiry_date->gte(now())) {
+            return response()->json([
+                'message' => 'You cannot change your membership plan until your current plan expires.',
+            ], 422);
+        }
 
         $validated = $request->validate([
             'membership_type' => ['required', 'string'],
@@ -292,7 +304,7 @@ class MemberPageController extends Controller
 
     private function memberBookingSchedule(int $memberId)
     {
-        return collect(DB::select('CALL get_member_booking_schedule(?)', [$memberId]))
+        return Booking::getMemberBookingSchedule($memberId)
             ->map(function (object $booking): object {
                 $booking->status = $booking->booking_status;
                 $booking->schedule_time = $booking->schedule_time ? Carbon::parse($booking->schedule_time) : null;
@@ -301,4 +313,34 @@ class MemberPageController extends Controller
             })
             ->values();
     }
+    private function storePayment(Request $request)
+{
+    $member = DB::table('members')
+        ->where('member_id', $request->member_id)
+        ->first();
+
+    if ($member->expiry_date && Carbon::parse($member->expiry_date)->gte(now())) {
+        // allow only advance (no same-day overlap)
+        $startDate = Carbon::parse($member->expiry_date)->addDay();
+    } else {
+        // expired → start today
+        $startDate = now();
+    }
+
+    DB::table('payments')->insert([
+        'member_id' => $member->member_id,
+        'requested_membership_plan_id' => $request->plan_id,
+        'requested_membership_type' => $request->membership_type,
+        'amount' => $request->amount,
+        'payment_date' => now(),
+        'payment_method' => $request->method,
+        'status' => 'Pending',
+        'created_at' => now(),
+        'updated_at' => now()
+    ]);
+
+    return "Payment submitted. Waiting for approval.";
 }
+}
+
+    

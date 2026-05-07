@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Builder;
 
 class GymClass extends Model
 {
@@ -21,12 +22,9 @@ class GymClass extends Model
         'max_slots',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'schedule_time' => 'datetime',
-        ];
-    }
+    protected $casts = [
+        'schedule_time' => 'datetime',
+    ];
 
     public function trainers(): BelongsToMany
     {
@@ -56,5 +54,31 @@ class GymClass extends Model
     public function attendances(): HasMany
     {
         return $this->hasMany(Attendance::class, 'class_id', 'class_id');
+    }
+
+    /**
+     * Get classes with bookings view (replaces classes_with_bookings_view)
+     */
+    public function scopeWithBookings(Builder $query)
+    {
+        return $query->leftJoin('bookings', 'classes.class_id', '=', 'bookings.class_id')
+            ->leftJoin('class_trainer', 'classes.class_id', '=', 'class_trainer.class_id')
+            ->leftJoin('staff', 'class_trainer.staff_id', '=', 'staff.staff_id')
+            ->leftJoin('users', 'staff.user_id', '=', 'users.id')
+            ->select([
+                'classes.class_id',
+                'classes.class_name',
+                'classes.schedule_time',
+                'classes.max_slots',
+            ])
+            ->selectRaw('COUNT(DISTINCT bookings.booking_id) as bookings_count')
+            ->selectRaw('COUNT(DISTINCT class_trainer.staff_id) as trainer_count')
+            ->selectRaw("GROUP_CONCAT(DISTINCT users.full_name ORDER BY users.full_name SEPARATOR ', ') as trainer_names")
+            ->groupBy([
+                'classes.class_id',
+                'classes.class_name',
+                'classes.schedule_time',
+                'classes.max_slots',
+            ]);
     }
 }

@@ -1,9 +1,9 @@
-@extends('layouts.admin', ['title' => 'Equipment Management'])
+@extends('layouts.admin', ['title' => 'Equipment Monitoring'])
 
 @section('content')
     <div class="page-header">
         <div>
-            <h1 class="page-title">Equipment Management</h1>
+            <h1 class="page-title">Equipment Monitoring</h1>
             <p class="page-description">Keep an eye on machine readiness, maintenance backlog, and the condition of the training floor.</p>
         </div>
     </div>
@@ -37,51 +37,12 @@
 
     <section class="section-card">
         <div class="section-heading">
-            <span class="inline-icon">@include('admin.partials.icon', ['name' => 'plus'])</span>
-            <strong>Add Equipment Item</strong>
+            <span class="inline-icon">@include('admin.partials.icon', ['name' => 'equipment'])</span>
+            <strong>Monitoring Only</strong>
         </div>
-
-        @if (session('success'))
-            <div class="field-error" style="color: #114d05; background: rgba(220, 248, 198, 0.45); border-radius: 16px; padding: 14px; margin-bottom: 18px; border: 1px solid rgba(52, 211, 153, 0.3);">
-                {{ session('success') }}
-            </div>
-        @endif
-
-        <form method="POST" action="{{ route('admin.equipment.store') }}" class="form-grid" style="grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 16px;">
-            @csrf
-
-            <div class="field">
-                <label for="name">Name</label>
-                <input id="name" name="name" type="text" value="{{ old('name') }}" class="{{ $errors->has('name') ? 'input-invalid' : '' }}">
-                @error('name')<div class="field-error">{{ $message }}</div>@enderror
-            </div>
-
-            <div class="field">
-                <label for="quantity">Quantity</label>
-                <input id="quantity" name="quantity" type="number" min="1" value="{{ old('quantity', 1) }}" class="{{ $errors->has('quantity') ? 'input-invalid' : '' }}">
-                @error('quantity')<div class="field-error">{{ $message }}</div>@enderror
-            </div>
-
-            <div class="field">
-                <label for="status">Status</label>
-                <select id="status" name="status" class="{{ $errors->has('status') ? 'input-invalid' : '' }}">
-                    <option value="Available" {{ old('status') === 'Available' ? 'selected' : '' }}>Available</option>
-                    <option value="In Use" {{ old('status') === 'In Use' ? 'selected' : '' }}>In Use</option>
-                    <option value="Maintenance" {{ old('status') === 'Maintenance' ? 'selected' : '' }}>Maintenance</option>
-                </select>
-                @error('status')<div class="field-error">{{ $message }}</div>@enderror
-            </div>
-
-            <div class="field" style="grid-column: span 3;">
-                <label for="description">Description</label>
-                <input id="description" name="description" type="text" value="{{ old('description') }}" class="{{ $errors->has('description') ? 'input-invalid' : '' }}">
-                @error('description')<div class="field-error">{{ $message }}</div>@enderror
-            </div>
-
-            <div style="grid-column: span 3; display: flex; justify-content: flex-end;">
-                <button type="submit" class="btn primary">Add equipment</button>
-            </div>
-        </form>
+        <p style="margin: 0; color: var(--muted-text, #5f6b7a);">
+            Equipment entries are now created from the staff equipment page. This admin view is for monitoring all recorded equipment, including items added by staff.
+        </p>
     </section>
 
     <section class="section-card">
@@ -118,5 +79,10 @@
                 </tbody>
             </table>
         </div>
+        @if (method_exists($equipmentItems, 'hasPages') && $equipmentItems->hasPages())
+            <div class="pagination">
+                {{ $equipmentItems->links() }}
+            </div>
+        @endif
     </section>
 @endsection

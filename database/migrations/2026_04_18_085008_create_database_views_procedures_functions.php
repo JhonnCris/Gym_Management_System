@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\ManagedSqlFunctions;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
@@ -61,19 +62,19 @@ return new class extends Migration
         ");
 
         // Create Functions
-        DB::statement("
+        ManagedSqlFunctions::run("
             CREATE FUNCTION get_total_paid_amount() RETURNS DECIMAL(10,2)
             BEGIN
                 RETURN (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE status = 'Paid');
             END
-        ");
+        ", 'create function get_total_paid_amount');
 
-        DB::statement("
+        ManagedSqlFunctions::run("
             CREATE FUNCTION get_pending_count() RETURNS INT
             BEGIN
                 RETURN (SELECT COUNT(*) FROM payments WHERE status = 'Pending');
             END
-        ");
+        ", 'create function get_pending_count');
 
         // Create Procedures
         DB::statement("
@@ -90,8 +91,8 @@ return new class extends Migration
     public function down(): void
     {
         DB::statement('DROP PROCEDURE IF EXISTS get_member_bookings');
-        DB::statement('DROP FUNCTION IF EXISTS get_pending_count');
-        DB::statement('DROP FUNCTION IF EXISTS get_total_paid_amount');
+        ManagedSqlFunctions::run('DROP FUNCTION IF EXISTS get_pending_count', 'drop function get_pending_count');
+        ManagedSqlFunctions::run('DROP FUNCTION IF EXISTS get_total_paid_amount', 'drop function get_total_paid_amount');
         DB::statement('DROP VIEW IF EXISTS member_bookings_view');
         DB::statement('DROP VIEW IF EXISTS membership_distribution_view');
         DB::statement('DROP VIEW IF EXISTS pending_payments_view');

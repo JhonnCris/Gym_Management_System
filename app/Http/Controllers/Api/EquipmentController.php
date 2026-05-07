@@ -25,7 +25,7 @@ class EquipmentController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'quantity' => ['nullable', 'integer', 'min:0'],
-            'status' => ['nullable', Rule::in(['Available', 'In Use', 'Maintenance'])],
+            'status' => ['nullable', Rule::in(['Available', 'Under Repair', 'Maintenance'])],
             'description' => ['nullable', 'string'],
         ]);
 
@@ -44,7 +44,7 @@ class EquipmentController extends Controller
         $validated = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:100'],
             'quantity' => ['sometimes', 'required', 'integer', 'min:0'],
-            'status' => ['sometimes', 'required', Rule::in(['Available', 'In Use', 'Maintenance'])],
+            'status' => ['sometimes', 'required', Rule::in(['Available', 'Under Repair', 'Maintenance'])],
             'description' => ['sometimes', 'nullable', 'string'],
         ]);
 

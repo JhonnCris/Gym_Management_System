@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\ManagedSqlFunctions;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 
@@ -76,7 +77,7 @@ return new class extends Migration
             'get_pending_count',
             'get_total_paid_amount',
         ] as $function) {
-            DB::unprepared("DROP FUNCTION IF EXISTS `{$function}`");
+            ManagedSqlFunctions::run("DROP FUNCTION IF EXISTS `{$function}`", "drop function {$function}");
         }
     }
 
@@ -272,7 +273,7 @@ return new class extends Migration
 
     private function createFunctions(): void
     {
-        DB::unprepared(<<<'SQL'
+        ManagedSqlFunctions::run(<<<'SQL'
             CREATE FUNCTION get_total_paid_amount() RETURNS DECIMAL(12,2)
             READS SQL DATA
             BEGIN
@@ -285,9 +286,9 @@ return new class extends Migration
 
                 RETURN total_amount;
             END
-        SQL);
+        SQL, 'create function get_total_paid_amount');
 
-        DB::unprepared(<<<'SQL'
+        ManagedSqlFunctions::run(<<<'SQL'
             CREATE FUNCTION get_pending_count() RETURNS INT
             READS SQL DATA
             BEGIN
@@ -300,9 +301,9 @@ return new class extends Migration
 
                 RETURN pending_count;
             END
-        SQL);
+        SQL, 'create function get_pending_count');
 
-        DB::unprepared(<<<'SQL'
+        ManagedSqlFunctions::run(<<<'SQL'
             CREATE FUNCTION get_total_members() RETURNS INT
             READS SQL DATA
             BEGIN
@@ -314,9 +315,9 @@ return new class extends Migration
 
                 RETURN member_count;
             END
-        SQL);
+        SQL, 'create function get_total_members');
 
-        DB::unprepared(<<<'SQL'
+        ManagedSqlFunctions::run(<<<'SQL'
             CREATE FUNCTION get_total_attendances() RETURNS INT
             READS SQL DATA
             BEGIN
@@ -328,9 +329,9 @@ return new class extends Migration
 
                 RETURN attendance_count;
             END
-        SQL);
+        SQL, 'create function get_total_attendances');
 
-        DB::unprepared(<<<'SQL'
+        ManagedSqlFunctions::run(<<<'SQL'
             CREATE FUNCTION get_today_attendance_count() RETURNS INT
             READS SQL DATA
             BEGIN
@@ -343,9 +344,9 @@ return new class extends Migration
 
                 RETURN attendance_count;
             END
-        SQL);
+        SQL, 'create function get_today_attendance_count');
 
-        DB::unprepared(<<<'SQL'
+        ManagedSqlFunctions::run(<<<'SQL'
             CREATE FUNCTION get_today_unique_members_count() RETURNS INT
             READS SQL DATA
             BEGIN
@@ -358,9 +359,9 @@ return new class extends Migration
 
                 RETURN member_count;
             END
-        SQL);
+        SQL, 'create function get_today_unique_members_count');
 
-        DB::unprepared(<<<'SQL'
+        ManagedSqlFunctions::run(<<<'SQL'
             CREATE FUNCTION get_currently_in_count() RETURNS INT
             READS SQL DATA
             BEGIN
@@ -374,9 +375,9 @@ return new class extends Migration
 
                 RETURN member_count;
             END
-        SQL);
+        SQL, 'create function get_currently_in_count');
 
-        DB::unprepared(<<<'SQL'
+        ManagedSqlFunctions::run(<<<'SQL'
             CREATE FUNCTION get_week_attendance_count() RETURNS INT
             READS SQL DATA
             BEGIN
@@ -389,9 +390,9 @@ return new class extends Migration
 
                 RETURN attendance_count;
             END
-        SQL);
+        SQL, 'create function get_week_attendance_count');
 
-        DB::unprepared(<<<'SQL'
+        ManagedSqlFunctions::run(<<<'SQL'
             CREATE FUNCTION get_classes_today_count() RETURNS INT
             READS SQL DATA
             BEGIN
@@ -404,9 +405,9 @@ return new class extends Migration
 
                 RETURN class_count;
             END
-        SQL);
+        SQL, 'create function get_classes_today_count');
 
-        DB::unprepared(<<<'SQL'
+        ManagedSqlFunctions::run(<<<'SQL'
             CREATE FUNCTION get_equipment_issues_count() RETURNS INT
             READS SQL DATA
             BEGIN
@@ -420,9 +421,9 @@ return new class extends Migration
 
                 RETURN equipment_count;
             END
-        SQL);
+        SQL, 'create function get_equipment_issues_count');
 
-        DB::unprepared(<<<'SQL'
+        ManagedSqlFunctions::run(<<<'SQL'
             CREATE FUNCTION get_month_revenue(year_param INT, month_param INT) RETURNS DECIMAL(12,2)
             READS SQL DATA
             BEGIN
@@ -437,9 +438,9 @@ return new class extends Migration
 
                 RETURN total_revenue;
             END
-        SQL);
+        SQL, 'create function get_month_revenue');
 
-        DB::unprepared(<<<'SQL'
+        ManagedSqlFunctions::run(<<<'SQL'
             CREATE FUNCTION get_membership_plan_price(plan_name_param VARCHAR(50)) RETURNS DECIMAL(12,2)
             READS SQL DATA
             BEGIN
@@ -466,7 +467,7 @@ return new class extends Migration
 
                 RETURN COALESCE(plan_price, 0.00);
             END
-        SQL);
+        SQL, 'create function get_membership_plan_price');
     }
 
     private function createProcedures(): void
